@@ -1,85 +1,46 @@
 # FP&A Copilot
 
-Quarterly variance analysis on **real SEC XBRL data** for any US public company, with an
-AI-generated variance narrative in the voice of an FP&A analyst briefing a CFO. No fictional
-companies, no toy numbers — every figure is what the company actually filed with the SEC.
+**Quarterly variance analysis on real SEC filings — for any US public company.**
+
+Pulls a company's actual quarterly numbers straight from SEC EDGAR, computes QoQ and YoY variance, and (optionally) writes an FP&A-style variance narrative in the voice of an analyst briefing a CFO. No fictional companies, no toy numbers — every figure is what the company actually filed.
+
+### ▶ Live demo — [charveepat-fpa-copilot.streamlit.app](https://charveepat-fpa-copilot.streamlit.app)
+
+Type any ticker (MSFT, AAPL, NVDA, …) and it pulls the real filings live. The public demo runs without an API key: the data, variance tables, and trend chart all work; the AI narrative is gated behind a key (below).
+
+---
 
 ## What it demonstrates
 
-This is a level-up of an earlier FP&A Variance Narrator script into a deployed, interactive
-tool. The concept: **structured grounding**. The model never touches raw filings and never
-does its own arithmetic — it's handed a pre-computed variance table and asked only to write
-commentary from it, with an explicit rule that every number it cites must come from the table.
-This is the same division of labor real FP&A teams use between their BI tool (does the math)
-and their analyst (writes the "why"), and it's what keeps the AI's output auditable instead of
-being a black box that might hallucinate a number.
+**Structured grounding.** The model never touches raw filings and never does its own arithmetic. It's handed a pre-computed variance table and asked only to write the commentary, under an explicit rule that every number it cites must trace back to a cell in that table. This is the same division of labor a real FP&A team uses between the BI tool (does the math) and the analyst (writes the "why") — and it's what keeps the output auditable instead of a black box that might hallucinate a figure.
 
-It also solves a real problem: **there's no public "budget" for a public company** — internal
-plans aren't disclosed. So instead of faking one, this uses the two baselines FP&A teams
-actually fall back on when no budget is available: quarter-over-quarter and year-over-year
-(the seasonality-safe one). Q4 isn't separately reported in XBRL (10-Ks report a 12-month
-duration, not 3 months), so it's derived as FY total minus Q1+Q2+Q3 — the standard trick
-analysts use to back into a "phantom" Q4.
+**No fake budget.** Public companies don't disclose internal plans, so there's no real "budget vs. actual." Rather than invent one, this uses the two baselines FP&A teams actually fall back on: quarter-over-quarter and year-over-year (the seasonality-safe one). Q4 isn't separately tagged in XBRL — 10-Ks report a 12-month duration, not 3 months — so it's derived as FY total minus Q1+Q2+Q3, the standard way analysts back into a "phantom" Q4.
 
 ## How it works
 
-1. **`edgar_quarterly.py`** — looks up a ticker's CIK, pulls the full XBRL company-facts JSON
-   from SEC EDGAR (free, no API key, just a User-Agent header), and extracts quarterly
-   revenue, gross profit, R&D, SG&A, operating income, and net income. Computes QoQ and YoY
-   $ and % variance for each line item.
-2. **`narrative.py`** — feeds the computed variance table (not raw filings) to Claude
-   (`claude-haiku-4-5`) with a strict grounding instruction, and asks for a CFO-briefing-style
-   narrative: materiality-ordered bullets, each with the actual, the variance, and a clearly
-   labeled *inference* about the driver (flagged as inference, since the model has no access
-   to management commentary — it's reasoning from numbers only).
-3. **`app.py`** — Streamlit UI: ticker input, actuals table, color-graded YoY/QoQ variance
-   tables, a trendline chart, and a button to generate the narrative.
+| File | Role |
+|------|------|
+| `edgar_quarterly.py` | Looks up the ticker's CIK, pulls the full XBRL company-facts JSON from SEC EDGAR (free, no API key — just a User-Agent header), extracts quarterly revenue, gross profit, R&D, SG&A, operating income, and net income, and computes QoQ/YoY variance in $ and %. |
+| `narrative.py` | Feeds the *computed variance table* (never raw filings) to Claude with a strict grounding instruction, and asks for a CFO-briefing narrative: materiality-ordered bullets, each with the actual, the variance, and a clearly-labeled driver *inference*. |
+| `app.py` | Streamlit UI — ticker input, actuals table, color-graded YoY/QoQ variance tables, a chronological trend chart, and the narrative generator. |
 
-Verified live against real MSFT and AAPL filings — e.g. MSFT Q3 FY2026 revenue $82.89B
-(+18.3% YoY), AAPL Q1 FY2026 revenue $143.76B (+15.7% YoY, +40.3% QoQ reflecting the holiday
-quarter) — all pulled live from EDGAR, not hardcoded.
+Verified live against real filings — e.g. MSFT Q3 FY2026 revenue $82.89B (+18.3% YoY), AAPL Q1 FY2026 revenue $143.76B (+40.3% QoQ, reflecting the holiday quarter) — all pulled live from EDGAR, nothing hardcoded.
 
-**Grounding fix (2026-07-14):** the prompt tells Claude to state "YoY (or QoQ if YoY is n/a)",
-but `rows_to_markdown_table()` only ever encoded YoY per cell — for a recent IPO with < 4
-quarters of history (YoY undefined), Claude had no QoQ data to fall back on despite the prompt
-promising it. Caught via CRCL (real IPO, June 2025): 3 of 3 recent quarters had YoY n/a while
-real QoQ growth (+19.8%, +46.0%) never reached the model. Fixed by including QoQ per cell
-alongside YoY. `test_grounding.py` is a regression test for this specific failure mode — it
-deliberately targets a low-history ticker rather than MSFT/AAPL, since happy-path tickers can't
-exercise the fallback branch.
+## A real bug this caught
 
-## Running locally
+The prompt tells the model to state "YoY, or QoQ if YoY is n/a" — but the table builder originally encoded only YoY per cell. For a recent IPO with under four quarters of history (YoY undefined), the model had no QoQ to fall back on despite the prompt promising it. Found via CRCL (Circle, IPO June 2025): three recent quarters showed YoY n/a while real QoQ growth (+19.8%, +46.0%) never reached the model. Fixed by encoding QoQ per cell alongside YoY. `test_grounding.py` is a regression test for exactly this failure mode — it deliberately targets a low-history ticker, since a mature filer like MSFT can never exercise the fallback branch.
+
+## Run locally
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-export ANTHROPIC_API_KEY=your_key_here   # optional — data/variance table works without it
+export ANTHROPIC_API_KEY=your_key_here   # optional — everything except the AI narrative works without it
 .venv/bin/streamlit run app.py
 ```
 
-Without an API key, the data and variance tables still work in full; only the "Generate
-narrative" button is disabled (it tells you why instead of failing silently).
+Without a key, the data and variance tables work in full; the narrative section shows the exact grounded table that *would* be sent to the model, so you can see the grounding design even without generating commentary.
 
-## To push this to GitHub
+## Stack
 
-```bash
-cd /Users/charveepatel/Claude/fpa-copilot
-git init
-git add .
-git commit -m "FP&A Copilot: real-data quarterly variance analysis + AI narrative"
-gh repo create fpa-copilot-sec-variance --public --source=. --remote=origin
-git push -u origin main
-```
-
-(Suggested repo name: `fpa-copilot-sec-variance`.)
-
-## Deploying (free — Streamlit Community Cloud)
-
-1. Push the repo to GitHub (above).
-2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with GitHub, click "New app."
-3. Point it at this repo, branch `main`, file `app.py`.
-4. In the app's "Secrets" settings, add:
-   ```
-   ANTHROPIC_API_KEY = "your_key_here"
-   ```
-5. Deploy — you get a public `*.streamlit.app` URL, a clickable resume/portfolio link.
+Python · Streamlit · pandas · SEC EDGAR XBRL API · Anthropic Claude (`claude-haiku-4-5`) · Altair
