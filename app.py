@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import os
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
 from edgar_quarterly import build_variance_table
-from narrative import generate_variance_narrative
+from narrative import generate_variance_narrative, rows_to_markdown_table
 
 LINE_ITEMS = [
     "revenue",
@@ -86,13 +87,40 @@ st.dataframe(
     use_container_width=True,
 )
 
-st.line_chart(df[["revenue", "operating_income", "net_income"]] / 1e9)
+st.subheader("Trend ($B)")
+_trend_cols = [c for c in ["revenue", "operating_income", "net_income"] if c in df.columns]
+_chart_long = (
+    (df[_trend_cols] / 1e9)
+    .reset_index()
+    .melt("quarter", var_name="metric", value_name="usd_b")
+)
+_chart = (
+    alt.Chart(_chart_long)
+    .mark_line(point=True)
+    .encode(
+        x=alt.X("quarter:N", sort=list(df.index), title="Quarter"),
+        y=alt.Y("usd_b:Q", title="USD (billions)"),
+        color=alt.Color("metric:N", title=None),
+    )
+    .properties(height=320)
+)
+st.altair_chart(_chart, use_container_width=True)
 
 st.subheader("AI Variance Narrative")
-if st.button("Generate narrative for latest quarter", type="primary"):
-    try:
-        with st.spinner("Writing variance commentary..."):
-            narrative = generate_variance_narrative(ticker, rows, actuals_cols)
-        st.markdown(narrative)
-    except RuntimeError as e:
-        st.warning(str(e))
+if api_key_present:
+    if st.button("Generate narrative for latest quarter", type="primary"):
+        try:
+            with st.spinner("Writing variance commentary..."):
+                narrative = generate_variance_narrative(ticker, rows, actuals_cols)
+            st.markdown(narrative)
+        except RuntimeError as e:
+            st.warning(str(e))
+else:
+    st.info(
+        "**Live AI commentary runs when an `ANTHROPIC_API_KEY` is set.** This public "
+        "demo runs without one — so instead, here is the exact grounded input the model "
+        "receives. The narrative model never sees raw filings and does no arithmetic of "
+        "its own: every figure it can cite must trace back to a cell in this table, so it "
+        "cannot introduce a number the filings don't support."
+    )
+    st.markdown(rows_to_markdown_table(rows, actuals_cols))
