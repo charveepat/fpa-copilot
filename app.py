@@ -1,4 +1,4 @@
-"""FP&A Copilot — real quarterly variance analysis + AI narrative for any US public company."""
+"""SEC Variance Analyzer — real quarterly variance analysis + AI narrative for any US public company."""
 
 from __future__ import annotations
 

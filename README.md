@@ -6,7 +6,7 @@ Pulls a company's actual quarterly numbers straight from SEC EDGAR, computes QoQ
 
 > **Scope, honestly:** this runs on *public* SEC filings, so it's variance analysis of the kind an equity or FP&A analyst does on outside companies — not a replacement for internal FP&A, which works on a company's own budget-vs-actuals. It's built to demonstrate the data pipeline (real EDGAR/XBRL) and the grounding design (the AI can't cite a number that isn't in the computed table). Point the same architecture at internal actuals and it's exactly what an FP&A automation needs.
 
-### ▶ Live demo — [charveepat-fpa-copilot.streamlit.app](https://charveepat-fpa-copilot.streamlit.app)
+### ▶ Live demo — [charveepat-sec-variance-analyzer.streamlit.app](https://charveepat-sec-variance-analyzer.streamlit.app)
 
 Type any ticker (MSFT, AAPL, NVDA, …) and it pulls the real filings live. The public demo runs without an API key: the data, variance tables, and trend chart all work; the AI narrative is gated behind a key (below).
 
