@@ -1,8 +1,10 @@
-# FP&A Copilot
+# SEC Variance Analyzer
 
 **Quarterly variance analysis on real SEC filings — for any US public company.**
 
-Pulls a company's actual quarterly numbers straight from SEC EDGAR, computes QoQ and YoY variance, and (optionally) writes an FP&A-style variance narrative in the voice of an analyst briefing a CFO. No fictional companies, no toy numbers — every figure is what the company actually filed.
+Pulls a company's actual quarterly numbers straight from SEC EDGAR, computes QoQ and YoY variance, and (optionally) writes an analyst-style variance narrative in the voice of an FP&A analyst briefing a CFO. No fictional companies, no toy numbers — every figure is what the company actually filed.
+
+> **Scope, honestly:** this runs on *public* SEC filings, so it's variance analysis of the kind an equity or FP&A analyst does on outside companies — not a replacement for internal FP&A, which works on a company's own budget-vs-actuals. It's built to demonstrate the data pipeline (real EDGAR/XBRL) and the grounding design (the AI can't cite a number that isn't in the computed table). Point the same architecture at internal actuals and it's exactly what an FP&A automation needs.
 
 ### ▶ Live demo — [charveepat-fpa-copilot.streamlit.app](https://charveepat-fpa-copilot.streamlit.app)
 

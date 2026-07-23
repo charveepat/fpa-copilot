@@ -20,9 +20,9 @@ LINE_ITEMS = [
     "net_income",
 ]
 
-st.set_page_config(page_title="FP&A Copilot", page_icon="📊", layout="wide")
+st.set_page_config(page_title="SEC Variance Analyzer", page_icon="📊", layout="wide")
 
-st.title("📊 FP&A Copilot")
+st.title("📊 SEC Variance Analyzer")
 st.caption(
     "Quarterly variance analysis on real SEC XBRL data — no fictional companies, "
     "no toy numbers. Every figure here is what the company actually filed."
